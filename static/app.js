@@ -123,7 +123,7 @@ const SOCIAL_LINKS = [
   { name: "Thumbtack",     url: kw => `https://www.thumbtack.com/search/?q=${encodeURIComponent(kw)}`,             note: "No login needed" },
   { name: "TaskRabbit",    url: kw => `https://www.taskrabbit.com/search?q=${encodeURIComponent(kw)}`,             note: "No login needed" },
   // login needed
-  { name: "Facebook Groups", url: kw => `https://www.facebook.com/search/groups/?q=${encodeURIComponent(kw)}`,        note: "Login required" },
+  { name: "Facebook Groups", url: kw => `https://www.facebook.com`,                                                    note: "Login required — search manually" },
   { name: "LinkedIn",      url: kw => `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(kw)}`, note: "Login required" },
   { name: "Nextdoor",      url: kw => `https://nextdoor.com/find-services/?query=${encodeURIComponent(kw)}`,       note: "Login required" },
   { name: "TikTok",        url: kw => `https://www.tiktok.com/search?q=${encodeURIComponent(kw)}`,                note: "No login needed" },
@@ -133,9 +133,10 @@ function renderSocialBtns() {
   const kw = $("#fl-keyword").value.trim() || "website design";
   const el = $("#fl-social-btns");
   el.innerHTML = SOCIAL_LINKS.map(s => {
-    const cls = s.note === "Login required" ? "btn blue dim" : "btn blue";
+    const needsLogin = s.note.startsWith("Login required");
+    const cls = needsLogin ? "btn blue dim" : "btn blue";
     return `<a href="${s.url(kw)}" target="_blank" title="${s.note}">
-      <button class="${cls}">${s.name} <small style="font-weight:normal;opacity:.8">${s.note === "Login required" ? "🔒" : "✓"}</small></button>
+      <button class="${cls}">${s.name} <small style="font-weight:normal;opacity:.8">${needsLogin ? "🔒" : "✓"}</small></button>
     </a>`;
   }).join("");
 }
