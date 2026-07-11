@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: money-generator-machine-2
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web_app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
