@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Money Generator Machine 2.0</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-dark:#0d1b5e; --bg-light:#f0f2f5; --green:#4caf7d; --green-hov:#3d9e6e;
+  --blue:#1565c0; --blue-hov:#0d4fa0; --red:#c0392b; --text:#1a1a2e;
+  --muted:#666; --border:#dde1ea; --white:#ffffff; --radius:8px;
+}
+body { font-family:"Segoe UI",system-ui,sans-serif; font-size:14px; background:var(--bg-light); color:var(--text); min-height:100vh; }
+header { background:var(--bg-dark); color:var(--white); padding:16px 28px; display:flex; align-items:center; gap:12px; box-shadow:0 3px 10px rgba(0,0,0,.3); }
+header h1 { font-size:22px; font-weight:700; letter-spacing:.4px; }
+nav#tabs { background:var(--bg-dark); display:flex; flex-wrap:wrap; gap:2px; padding:0 16px; }
+.tab-btn { background:rgba(255,255,255,.12); color:rgba(255,255,255,.75); border:none; padding:9px 16px; font-size:13px; cursor:pointer; border-radius:var(--radius) var(--radius) 0 0; transition:background .15s,color .15s; }
+.tab-btn:hover { background:rgba(255,255,255,.22); color:var(--white); }
+.tab-btn.active { background:var(--bg-light); color:var(--text); font-weight:600; }
+main { padding:24px 28px; max-width:1200px; }
+.tab-panel { display:none; } .tab-panel.active { display:block; }
+h2 { font-size:17px; font-weight:700; margin-bottom:14px; color:var(--bg-dark); }
+h3 { font-size:15px; font-weight:600; margin-bottom:10px; color:var(--bg-dark); }
+.row { display:flex; align-items:center; flex-wrap:wrap; } .gap { gap:10px; }
+.mt { margin-top:16px; } .mt-sm { margin-top:8px; } .mt-auto { margin-top:auto; }
+.mb-sm { margin-bottom:8px; } .ml-auto { margin-left:auto; } .flex1 { flex:1; min-width:140px; }
+.field { display:flex; flex-direction:column; gap:4px; }
+.field label { font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; }
+.inp { border:1px solid var(--border); border-radius:var(--radius); padding:8px 12px; font-size:13px; outline:none; background:var(--white); transition:border-color .15s,box-shadow .15s; }
+.inp:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(21,101,192,.15); }
+.inp.wide { width:100%; max-width:560px; } .inp.small { width:200px; }
+.btn { border:none; border-radius:var(--radius); padding:8px 18px; font-size:13px; font-weight:600; cursor:pointer; transition:background .15s,transform .1s; white-space:nowrap; }
+.btn:active { transform:scale(.97); }
+.btn.green { background:var(--green); color:var(--white); } .btn.green:hover { background:var(--green-hov); }
+.btn.blue  { background:var(--blue);  color:var(--white); } .btn.blue:hover  { background:var(--blue-hov); }
+.btn.red   { background:var(--red);   color:var(--white); }
+.btn.sm    { padding:5px 12px; font-size:12px; }
+.chk { display:flex; align-items:center; gap:5px; cursor:pointer; font-size:13px; white-space:nowrap; }
+.status { min-height:22px; margin:10px 0; font-size:13px; color:var(--muted); font-style:italic; }
+.hint { font-size:12px; color:var(--muted); margin-bottom:12px; }
+.hint-sm { font-size:11px; color:var(--muted); } .count { font-size:12px; color:var(--muted); }
+.list-wrap { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); max-height:320px; overflow-y:auto; }
+.url-list { list-style:none; }
+.url-list li { padding:7px 12px; border-bottom:1px solid var(--border); font-size:12px; cursor:pointer; transition:background .1s; }
+.url-list li:last-child { border-bottom:none; } .url-list li:hover { background:#eef3ff; }
+.url-list li a { color:var(--blue); text-decoration:none; word-break:break-all; }
+.url-list li a:hover { text-decoration:underline; }
+.table-wrap { overflow-x:auto; border-radius:var(--radius); border:1px solid var(--border); background:var(--white); margin-top:14px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+thead th { background:var(--bg-dark); color:var(--white); padding:10px 12px; text-align:left; white-space:nowrap; font-size:12px; font-weight:600; }
+tbody tr { border-bottom:1px solid var(--border); cursor:pointer; transition:background .1s; }
+tbody tr:last-child { border-bottom:none; } tbody tr:hover { background:#eef3ff; } tbody tr.selected { background:#ddeeff; }
+tbody td { padding:9px 12px; vertical-align:middle; }
+td.problem { color:var(--red); font-weight:500; } td.ok { color:var(--green); }
+td a { color:var(--blue); text-decoration:none; } td a:hover { text-decoration:underline; }
+.pitch-box { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:14px; }
+.pitch-box label { font-size:13px; display:block; margin-bottom:6px; }
+.pitch-box textarea { width:100%; border:1px solid var(--border); border-radius:6px; padding:10px; font-size:13px; resize:vertical; outline:none; font-family:inherit; }
+.pitch-box textarea:focus { border-color:var(--blue); }
+.msg-layout { display:flex; gap:20px; flex-wrap:wrap; }
+.msg-btns { display:flex; flex-direction:column; gap:12px; min-width:200px; }
+.msg-right { flex:1; min-width:320px; display:flex; flex-direction:column; }
+.msg-right textarea { flex:1; border:1px solid var(--border); border-radius:var(--radius); padding:12px; font-size:13px; resize:vertical; font-family:inherit; outline:none; }
+.msg-right textarea:focus { border-color:var(--blue); }
+.btn-grid { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
+.sources-row,.filters-row { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; flex-wrap:wrap; }
+.form-grid { display:grid; grid-template-columns:140px 1fr; gap:10px 14px; align-items:center; max-width:480px; }
+.form-grid label { font-size:13px; font-weight:600; text-align:right; }
+#toast { position:fixed; bottom:24px; right:24px; background:#222; color:#fff; padding:10px 20px; border-radius:var(--radius); font-size:13px; pointer-events:none; opacity:0; transition:opacity .25s; z-index:999; }
+#toast.show { opacity:1; }
+.city-picker { background:var(--white); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px; }
+.city-grid { display:flex; flex-wrap:wrap; gap:6px; max-height:130px; overflow-y:auto; }
+.city-tag { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--bg-light); transition:background .12s,border-color .12s; user-select:none; }
+.city-tag.on { background:var(--blue); color:var(--white); border-color:var(--blue); }
+.city-tag:hover:not(.on) { border-color:var(--blue); color:var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <h1>💰 Money Generator Machine 2.0</h1>
+</header>
+
+<nav id="tabs">
+  <button class="tab-btn active" data-tab="find-leads">Find Leads</button>
+  <button class="tab-btn" data-tab="biz-finder">Business Finder</button>
+  <button class="tab-btn" data-tab="messages">Message Generator</button>
+  <button class="tab-btn" data-tab="gig-sites">Gig Sites</button>
+  <button class="tab-btn" data-tab="clients">Clients</button>
+  <button class="tab-btn" data-tab="promotion">Promotion</button>
+  <button class="tab-btn" data-tab="grab-leads">Grab Leads</button>
+  <button class="tab-btn" data-tab="url-tab">URL</button>
+</nav>
+
+<main>
+
+<!-- ══ FIND LEADS ══════════════════════════════════════════════════════════ -->
+<section id="find-leads" class="tab-panel active">
+  <h2>Find Leads on Craigslist</h2>
+  <p class="hint">Example keywords: logo design, marketing, website design needed</p>
+
+  <div class="row gap">
+    <input id="fl-keyword" class="inp flex1" placeholder="Enter keyword…" value="website design">
+    <label class="chk"><input type="checkbox" id="fl-by-title"> Search by title only</label>
+    <label class="chk"><input type="checkbox" id="fl-today"> Posted today</label>
+    <button class="btn green" id="fl-search-btn">Search</button>
+  </div>
+
+  <div class="city-picker mt-sm">
+    <div class="row gap mb-sm">
+      <strong style="font-size:13px">Cities:</strong>
+      <button class="btn blue sm" id="fl-all-cities">All Cities</button>
+      <button class="btn blue sm" id="fl-clear-cities">Clear</button>
+      <span id="fl-city-count" class="count"></span>
+    </div>
+    <div id="fl-city-grid" class="city-grid"></div>
+  </div>
+
+  <div id="fl-status" class="status"></div>
+
+  <div class="list-wrap">
+    <ul id="fl-results" class="url-list"></ul>
+  </div>
+
+  <div class="row gap mt">
+    <span id="fl-count" class="count"></span>
+    <button class="btn blue" id="fl-save-btn" style="display:none">Save as .txt</button>
+  </div>
+</section>
+
+<!-- ══ BUSINESS FINDER ═════════════════════════════════════════════════════ -->
+<section id="biz-finder" class="tab-panel">
+  <h2>Business Finder & Audit</h2>
+
+  <div class="row gap">
+    <div class="field">
+      <label>Business type</label>
+      <input id="bf-keyword" class="inp" value="dentist">
+    </div>
+    <div class="field">
+      <label>Location</label>
+      <input id="bf-location" class="inp" value="Chicago, IL">
+    </div>
+    <button class="btn green mt-auto" id="bf-search-btn">Find Businesses</button>
+  </div>
+
+  <div class="row gap mt sources-row">
+    <strong>Sources:</strong>
+    <label class="chk"><input type="checkbox" id="bf-osm" checked> OpenStreetMap (free)</label>
+    <label class="chk"><input type="checkbox" id="bf-gmaps"> Google Maps
+      <input id="bf-gmaps-key" class="inp small" type="password" placeholder="API key">
+    </label>
+    <label class="chk"><input type="checkbox" id="bf-yelp"> Yelp
+      <input id="bf-yelp-key" class="inp small" type="password" placeholder="API key">
+    </label>
+    <span class="hint-sm">Free keys: console.cloud.google.com | yelp.com/developers</span>
+  </div>
+
+  <div class="row gap mt filters-row">
+    <strong>Filter:</strong>
+    <label class="chk"><input type="checkbox" class="bf-filter" value="no website"> no website</label>
+    <label class="chk"><input type="checkbox" class="bf-filter" value="broken website"> broken</label>
+    <label class="chk"><input type="checkbox" class="bf-filter" value="slow website"> slow</label>
+    <label class="chk"><input type="checkbox" class="bf-filter" value="no booking"> no booking</label>
+    <label class="chk"><input type="checkbox" class="bf-filter" value="no chatbot"> no chatbot</label>
+    <label class="chk"><input type="checkbox" class="bf-filter" value="poor reviews"> poor reviews</label>
+  </div>
+
+  <div id="bf-status" class="status"></div>
+
+  <div class="table-wrap">
+    <table id="bf-table">
+      <thead>
+        <tr>
+          <th>Business</th><th>Source</th><th>Phone</th><th>Rating</th><th>Issues</th><th>Website</th>
+        </tr>
+      </thead>
+      <tbody id="bf-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="pitch-box mt">
+    <label><strong>Targeted Pitch</strong></label>
+    <textarea id="bf-pitch" rows="4"></textarea>
+    <div class="row gap mt-sm">
+      <button class="btn green" id="bf-copy-pitch">Copy Pitch</button>
+      <button class="btn blue" id="bf-open-website">Open Website</button>
+      <button class="btn blue ml-auto" id="bf-export-csv">Export CSV</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ MESSAGE GENERATOR ═══════════════════════════════════════════════════ -->
+<section id="messages" class="tab-panel">
+  <h2>Message Generator</h2>
+  <div class="msg-layout">
+    <div class="msg-btns">
+      <button class="btn green" data-pool="intro">Generate Intro Message</button>
+      <button class="btn green" data-pool="msg2">Generate 2nd Message</button>
+      <button class="btn green" data-pool="msg3">Generate 3rd Message</button>
+    </div>
+    <div class="msg-right">
+      <div class="row gap mb-sm">
+        <button class="btn green" id="msg-copy">Copy</button>
+        <button class="btn blue" id="msg-save">Save as Custom</button>
+      </div>
+      <textarea id="msg-text" rows="10"></textarea>
+    </div>
+  </div>
+</section>
+
+<!-- ══ GIG SITES ═══════════════════════════════════════════════════════════ -->
+<section id="gig-sites" class="tab-panel">
+  <h2>Freelancer Sites</h2>
+  <div id="gig-btns" class="btn-grid"></div>
+
+  <h2 class="mt">Sites That Pay You</h2>
+  <div id="pay-btns" class="btn-grid"></div>
+</section>
+
+<!-- ══ CLIENTS ══════════════════════════════════════════════════════════════ -->
+<section id="clients" class="tab-panel">
+  <h2>Client Contact Details</h2>
+  <div class="form-grid">
+    <label>Name / Username</label><input id="cl-name" class="inp">
+    <label>Email</label><input id="cl-email" class="inp" type="email">
+    <label>Contact Number</label><input id="cl-phone" class="inp">
+  </div>
+  <button class="btn green mt" id="cl-save">Save Client</button>
+
+  <h3 class="mt">Saved Clients</h3>
+  <div class="table-wrap">
+    <table id="cl-table">
+      <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+      <tbody id="cl-tbody"></tbody>
+    </table>
+  </div>
+  <div class="row gap mt">
+    <button class="btn blue" id="cl-export">Export CSV</button>
+  </div>
+</section>
+
+<!-- ══ PROMOTION ═══════════════════════════════════════════════════════════ -->
+<section id="promotion" class="tab-panel">
+  <h2>Promotion Sites</h2>
+  <div id="promo-btns" class="btn-grid"></div>
+</section>
+
+<!-- ══ GRAB LEADS ══════════════════════════════════════════════════════════ -->
+<section id="grab-leads" class="tab-panel">
+  <h2>Grab Leads</h2>
+  <p>Click to automatically find people looking for extra income opportunities.</p>
+
+  <div class="city-picker mt-sm">
+    <div class="row gap mb-sm">
+      <strong style="font-size:13px">Cities:</strong>
+      <button class="btn blue sm" id="grab-all-cities">All Cities</button>
+      <button class="btn blue sm" id="grab-clear-cities">Clear</button>
+      <span id="grab-city-count" class="count"></span>
+    </div>
+    <div id="grab-city-grid" class="city-grid"></div>
+  </div>
+
+  <button class="btn green mt" id="grab-btn">Search</button>
+  <div id="grab-status" class="status"></div>
+  <div class="list-wrap mt">
+    <ul id="grab-results" class="url-list"></ul>
+  </div>
+  <span id="grab-count" class="count"></span>
+</section>
+
+<!-- ══ URL ════════════════════════════════════════════════════════════════ -->
+<section id="url-tab" class="tab-panel">
+  <h2>Custom URL</h2>
+  <input id="url-input" class="inp wide" placeholder="Paste URL here…">
+  <div class="row gap mt">
+    <button class="btn green" id="url-open">Open</button>
+    <button class="btn blue" id="url-clear">Clear</button>
+    <button class="btn blue" id="url-save-btn">Save</button>
+  </div>
+</section>
+
+</main>
+
+<div id="toast"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
