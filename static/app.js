@@ -123,7 +123,7 @@ const SOCIAL_LINKS = [
   { name: "Thumbtack",     url: kw => `https://www.thumbtack.com/search/?q=${encodeURIComponent(kw)}`,             note: "No login needed" },
   { name: "TaskRabbit",    url: kw => `https://www.taskrabbit.com/search?q=${encodeURIComponent(kw)}`,             note: "No login needed" },
   // login needed
-  { name: "Facebook Groups", url: kw => `https://www.facebook.com/groups/search/posts/?q=${encodeURIComponent(kw)}`, note: "Login required" },
+  { name: "Facebook Groups", url: kw => `https://www.facebook.com/search/groups/?q=${encodeURIComponent(kw)}`,        note: "Login required" },
   { name: "LinkedIn",      url: kw => `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(kw)}`, note: "Login required" },
   { name: "Nextdoor",      url: kw => `https://nextdoor.com/find-services/?query=${encodeURIComponent(kw)}`,       note: "Login required" },
   { name: "TikTok",        url: kw => `https://www.tiktok.com/search?q=${encodeURIComponent(kw)}`,                note: "No login needed" },
