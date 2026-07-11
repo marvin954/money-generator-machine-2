@@ -518,6 +518,109 @@ GRAB_LEADS_QUERIES = [
     "side hustle", "earn extra cash", "online job",
 ]
 
+# Reddit subreddits most likely to have people looking for freelancers / services
+REDDIT_SUBREDDITS = [
+    "forhire", "hiring", "slavelabour", "entrepreneur",
+    "smallbusiness", "WorkOnline", "digitalnomad", "freelance",
+]
+
+def search_reddit(keyword, subreddits=None, limit=50):
+    """Search Reddit via RSS (no API key needed, works without OAuth)."""
+    if not SCRAPING_AVAILABLE:
+        return []
+
+    import xml.etree.ElementTree as ET
+    chosen = subreddits if subreddits else REDDIT_SUBREDDITS
+    multi  = "+".join(chosen)          # Reddit multi-subreddit syntax
+    results = []
+    seen = set()
+
+    session = requests.Session()
+    # Must use a browser User-Agent — Reddit blocks generic UA
+    session.headers.update({"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
+                             "AppleWebKit/537.36 (KHTML, like Gecko) "
+                             "Chrome/125.0.0.0 Safari/537.36"})
+    try:
+        url = f"https://www.reddit.com/r/{multi}/search.rss"
+        r = session.get(url, params={"q": keyword, "sort": "new",
+                                     "restrict_sr": 1}, timeout=12)
+        if r.status_code != 200:
+            return []
+        ns = {"atom": "http://www.w3.org/2005/Atom"}
+        root = ET.fromstring(r.text)
+        for entry in root.findall("atom:entry", ns):
+            link_el  = entry.find("atom:link", ns)
+            title_el = entry.find("atom:title", ns)
+            cat_el   = entry.find("atom:category", ns)
+            href  = link_el.get("href", "") if link_el is not None else ""
+            title = title_el.text or href if title_el is not None else href
+            sub   = cat_el.get("label", "") if cat_el is not None else ""
+            if href and href not in seen:
+                seen.add(href)
+                results.append({
+                    "url":       href,
+                    "title":     title,
+                    "subreddit": sub,
+                    "source":    "Reddit",
+                })
+                if len(results) >= limit:
+                    break
+    except Exception:
+        pass
+    return results
+
+
+def search_upwork_rss(keyword, limit=40):
+    """Search free job boards: RemoteOK API + We Work Remotely RSS."""
+    if not SCRAPING_AVAILABLE:
+        return []
+
+    import xml.etree.ElementTree as ET
+    results = []
+    seen    = set()
+    kw      = keyword.lower()
+    ua      = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+               "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
+
+    # ── 1. RemoteOK — JSON API, filter client-side ──────────────────────────
+    try:
+        r = requests.get("https://remoteok.com/api",
+                         headers={"User-Agent": ua}, timeout=12)
+        if r.status_code == 200:
+            for job in r.json()[1:]:
+                title = job.get("position", "")
+                tags  = " ".join(job.get("tags") or [])
+                if kw not in title.lower() and kw not in tags.lower():
+                    continue
+                url = (job.get("url") or
+                       f"https://remoteok.com/remote-jobs/{job.get('id','')}")
+                if url and url not in seen:
+                    seen.add(url)
+                    results.append({"url": url, "title": title, "source": "RemoteOK"})
+    except Exception:
+        pass
+
+    # ── 2. We Work Remotely — RSS, filter client-side ───────────────────────
+    try:
+        r = requests.get("https://weworkremotely.com/remote-jobs.rss",
+                         headers={"User-Agent": ua}, timeout=12)
+        if r.status_code == 200:
+            root = ET.fromstring(r.text)
+            for item in root.iter("item"):
+                title = getattr(item.find("title"), "text", "") or ""
+                link  = getattr(item.find("link"),  "text", "") or ""
+                desc  = getattr(item.find("description"), "text", "") or ""
+                if kw not in title.lower() and kw not in desc.lower():
+                    continue
+                if link and link not in seen:
+                    seen.add(link)
+                    results.append({"url": link, "title": title,
+                                    "source": "WeWorkRemotely"})
+    except Exception:
+        pass
+
+    return results[:limit]
+
 
 def scrape_craigslist(keyword, by_title=False, posted_today=False, cities=None):
     """Return list of matching Craigslist URLs across selected cities."""

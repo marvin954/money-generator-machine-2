@@ -74,6 +74,12 @@ td a { color:var(--blue); text-decoration:none; } td a:hover { text-decoration:u
 .city-tag { display:inline-flex; align-items:center; gap:4px; padding:4px 10px; border-radius:20px; font-size:12px; cursor:pointer; border:1px solid var(--border); background:var(--bg-light); transition:background .12s,border-color .12s; user-select:none; }
 .city-tag.on { background:var(--blue); color:var(--white); border-color:var(--blue); }
 .city-tag:hover:not(.on) { border-color:var(--blue); color:var(--blue); }
+/* source tabs */
+.source-tabs { display:flex; gap:4px; border-bottom:2px solid var(--border); }
+.src-tab { background:none; border:none; border-bottom:2px solid transparent; margin-bottom:-2px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; color:var(--muted); transition:color .15s,border-color .15s; }
+.src-tab:hover { color:var(--text); }
+.src-tab.active { color:var(--blue); border-bottom-color:var(--blue); }
+.badge { display:inline-block; background:var(--bg-dark); color:var(--white); border-radius:4px; padding:1px 6px; font-size:10px; font-weight:600; margin-right:4px; vertical-align:middle; }
 </style>
 </head>
 <body>
@@ -96,36 +102,70 @@ td a { color:var(--blue); text-decoration:none; } td a:hover { text-decoration:u
 
 <!-- ══ FIND LEADS ══════════════════════════════════════════════════════════ -->
 <section id="find-leads" class="tab-panel active">
-  <h2>Find Leads on Craigslist</h2>
+  <h2>Find Leads</h2>
   <p class="hint">Example keywords: logo design, marketing, website design needed</p>
 
   <div class="row gap">
     <input id="fl-keyword" class="inp flex1" placeholder="Enter keyword…" value="website design">
-    <label class="chk"><input type="checkbox" id="fl-by-title"> Search by title only</label>
-    <label class="chk"><input type="checkbox" id="fl-today"> Posted today</label>
     <button class="btn green" id="fl-search-btn">Search</button>
+    <button class="btn blue" id="fl-save-btn" style="display:none">Save as .txt</button>
   </div>
 
-  <div class="city-picker mt-sm">
-    <div class="row gap mb-sm">
-      <strong style="font-size:13px">Cities:</strong>
-      <button class="btn blue sm" id="fl-all-cities">All Cities</button>
-      <button class="btn blue sm" id="fl-clear-cities">Clear</button>
-      <span id="fl-city-count" class="count"></span>
+  <!-- Source tabs -->
+  <div class="source-tabs mt">
+    <button class="src-tab active" data-src="craigslist">📋 Craigslist</button>
+    <button class="src-tab" data-src="reddit">👽 Reddit</button>
+    <button class="src-tab" data-src="upwork">💼 Job Boards</button>
+    <button class="src-tab" data-src="social">🌐 Social Media</button>
+  </div>
+
+  <!-- Craigslist options -->
+  <div id="fl-src-craigslist" class="src-panel active">
+    <div class="row gap mt-sm mb-sm">
+      <label class="chk"><input type="checkbox" id="fl-by-title"> Search by title only</label>
+      <label class="chk"><input type="checkbox" id="fl-today"> Posted today</label>
     </div>
-    <div id="fl-city-grid" class="city-grid"></div>
+    <div class="city-picker">
+      <div class="row gap mb-sm">
+        <strong style="font-size:13px">Cities:</strong>
+        <button class="btn blue sm" id="fl-all-cities">All Cities</button>
+        <button class="btn blue sm" id="fl-clear-cities">Clear</button>
+        <span id="fl-city-count" class="count"></span>
+      </div>
+      <div id="fl-city-grid" class="city-grid"></div>
+    </div>
+  </div>
+
+  <!-- Reddit options -->
+  <div id="fl-src-reddit" class="src-panel" style="display:none">
+    <div class="city-picker mt-sm">
+      <div class="row gap mb-sm">
+        <strong style="font-size:13px">Subreddits:</strong>
+        <button class="btn blue sm" id="fl-all-subs">All</button>
+        <button class="btn blue sm" id="fl-clear-subs">Clear</button>
+      </div>
+      <div id="fl-sub-grid" class="city-grid"></div>
+    </div>
+  </div>
+
+  <!-- Upwork options -->
+  <div id="fl-src-upwork" class="src-panel" style="display:none">
+    <p class="hint mt-sm">Searches Upwork's public job RSS feed — no account needed.</p>
+  </div>
+
+  <!-- Social Media -->
+  <div id="fl-src-social" class="src-panel" style="display:none">
+    <p class="hint mt-sm">These platforms require login or have restricted APIs. Click to search manually:</p>
+    <div class="btn-grid mt-sm" id="fl-social-btns"></div>
   </div>
 
   <div id="fl-status" class="status"></div>
 
+  <!-- Results -->
   <div class="list-wrap">
     <ul id="fl-results" class="url-list"></ul>
   </div>
-
-  <div class="row gap mt">
-    <span id="fl-count" class="count"></span>
-    <button class="btn blue" id="fl-save-btn" style="display:none">Save as .txt</button>
-  </div>
+  <span id="fl-count" class="count"></span>
 </section>
 
 <!-- ══ BUSINESS FINDER ═════════════════════════════════════════════════════ -->

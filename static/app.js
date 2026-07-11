@@ -72,66 +72,177 @@ $$(".tab-btn").forEach(btn => {
   });
 });
 
-/* ── SSE helper ────────────────────────────────────────────────────────── */
-function streamSSE(url, onData) {
-  const es = new EventSource(url);
-  es.onmessage = e => {
-    const d = JSON.parse(e.data);
-    onData(d);
-    if (d.done || d.error) es.close();
-  };
-  es.onerror = () => { onData({ error: "Connection error" }); es.close(); };
-  return es;
+/* ── SSE helper (fetch-based — avoids ERR_ABORTED on short streams) ─────── */
+async function streamSSE(url, onData) {
+  try {
+    const res = await fetch(url);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const parts = buf.split("\n\n");
+      buf = parts.pop();
+      for (const part of parts) {
+        const line = part.trim();
+        if (!line.startsWith("data:")) continue;
+        try {
+          const d = JSON.parse(line.slice(5).trim());
+          onData(d);
+        } catch {}
+      }
+    }
+  } catch (e) {
+    onData({ error: String(e) });
+  }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
    FIND LEADS
 ══════════════════════════════════════════════════════════════════════════ */
-let flUrls = [];
+let flLeads = [];   // [{url, title, source, ...}]
+let flActiveSrc = "craigslist";
 
+// Source tab switching
+$$(".src-tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    $$(".src-tab").forEach(b => b.classList.remove("active"));
+    $$(".src-panel").forEach(p => p.style.display = "none");
+    btn.classList.add("active");
+    flActiveSrc = btn.dataset.src;
+    $(`#fl-src-${flActiveSrc}`).style.display = "";
+  });
+});
+
+// Social media manual links
+const SOCIAL_LINKS = [
+  ["Facebook Groups", kw => `https://www.facebook.com/groups/search/posts/?q=${encodeURIComponent(kw)}`],
+  ["Twitter / X",    kw => `https://x.com/search?q=${encodeURIComponent(kw)}&f=live`],
+  ["LinkedIn",       kw => `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(kw)}`],
+  ["Nextdoor",       kw => `https://nextdoor.com/find-services/?query=${encodeURIComponent(kw)}`],
+  ["Thumbtack",      kw => `https://www.thumbtack.com/search/?q=${encodeURIComponent(kw)}`],
+  ["TaskRabbit",     kw => `https://www.taskrabbit.com/search?q=${encodeURIComponent(kw)}`],
+];
+
+function renderSocialBtns() {
+  const kw = $("#fl-keyword").value.trim() || "website design";
+  const el = $("#fl-social-btns");
+  el.innerHTML = SOCIAL_LINKS.map(([name, urlFn]) =>
+    `<a href="${urlFn(kw)}" target="_blank"><button class="btn blue">${name}</button></a>`
+  ).join("");
+}
+renderSocialBtns();
+$("#fl-keyword").addEventListener("input", renderSocialBtns);
+
+// Subreddit picker
+let getFlSubs;
+async function initSubPicker() {
+  const r = await fetch("/api/subreddits");
+  const subs = await r.json();
+  const grid = $("#fl-sub-grid");
+  subs.forEach(s => {
+    const tag = document.createElement("span");
+    tag.className = "city-tag on";
+    tag.dataset.id = s;
+    tag.textContent = "r/" + s;
+    tag.addEventListener("click", () => tag.classList.toggle("on"));
+    grid.appendChild(tag);
+  });
+  $("#fl-all-subs").addEventListener("click", () =>
+    $$(".city-tag", grid).forEach(t => t.classList.add("on")));
+  $("#fl-clear-subs").addEventListener("click", () =>
+    $$(".city-tag", grid).forEach(t => t.classList.remove("on")));
+  getFlSubs = () => [...$$(".city-tag.on", grid)].map(t => t.dataset.id);
+}
+initSubPicker();
+
+// Search button
 $("#fl-search-btn").addEventListener("click", () => {
   const kw = $("#fl-keyword").value.trim();
   if (!kw) { toast("Enter a keyword first."); return; }
 
-  flUrls = [];
+  if (flActiveSrc === "social") { toast("Use the buttons above to search social platforms."); return; }
+
+  flLeads = [];
   $("#fl-results").innerHTML = "";
   $("#fl-count").textContent = "";
   $("#fl-save-btn").style.display = "none";
-  $("#fl-status").textContent = "Scraping leads across cities… please wait";
+  $("#fl-status").textContent = "Searching…";
   $("#fl-search-btn").disabled = true;
 
-  const params = new URLSearchParams({
-    keyword: kw,
-    by_title:    $("#fl-by-title").checked,
-    posted_today: $("#fl-today").checked,
-  });
-  (getFlCities ? getFlCities() : []).forEach(c => params.append("cities", c));
+  if (flActiveSrc === "craigslist") {
+    const params = new URLSearchParams({
+      keyword: kw,
+      by_title:     $("#fl-by-title").checked,
+      posted_today: $("#fl-today").checked,
+    });
+    (getFlCities ? getFlCities() : []).forEach(c => params.append("cities", c));
+    streamSSE(`/api/find-leads?${params}`, d => {
+      if (d.status) { $("#fl-status").textContent = d.status; return; }
+      if (d.error)  { $("#fl-status").textContent = "Error: " + d.error; }
+      if (d.done) {
+        flLeads = d.urls.map(u => ({ url: u, title: u, source: "Craigslist" }));
+        renderLeadsList(flLeads);
+        finishSearch(flLeads.length);
+      }
+      if (d.done || d.error) $("#fl-search-btn").disabled = false;
+    });
 
-  streamSSE(`/api/find-leads?${params}`, d => {
-    if (d.status) { $("#fl-status").textContent = d.status; return; }
-    if (d.error)  { $("#fl-status").textContent = "Error: " + d.error; }
-    if (d.done) {
-      flUrls = d.urls;
-      renderUrlList("#fl-results", d.urls);
-      $("#fl-count").textContent = `Count: ${d.urls.length}`;
-      $("#fl-status").textContent = "Done.";
-      $("#fl-save-btn").style.display = d.urls.length ? "" : "none";
-    }
-    $("#fl-search-btn").disabled = false;
-  });
+  } else if (flActiveSrc === "reddit") {
+    const params = new URLSearchParams({ keyword: kw });
+    (getFlSubs ? getFlSubs() : []).forEach(s => params.append("subreddits", s));
+    streamSSE(`/api/find-leads/reddit?${params}`, d => {
+      if (d.status) { $("#fl-status").textContent = d.status; return; }
+      if (d.error)  { $("#fl-status").textContent = "Error: " + d.error; }
+      if (d.done) {
+        flLeads = d.results;
+        renderLeadsList(flLeads);
+        finishSearch(flLeads.length);
+      }
+      if (d.done || d.error) $("#fl-search-btn").disabled = false;
+    });
+
+  } else if (flActiveSrc === "upwork") {
+    streamSSE(`/api/find-leads/upwork?keyword=${encodeURIComponent(kw)}`, d => {
+      if (d.status) { $("#fl-status").textContent = d.status; return; }
+      if (d.error)  { $("#fl-status").textContent = "Error: " + d.error; }
+      if (d.done) {
+        flLeads = d.results;
+        renderLeadsList(flLeads);
+        finishSearch(flLeads.length);
+      }
+      if (d.done || d.error) $("#fl-search-btn").disabled = false;
+    });
+  }
 });
+
+function renderLeadsList(leads) {
+  const ul = $("#fl-results");
+  ul.innerHTML = leads.map(l => {
+    const label = l.title && l.title !== l.url ? l.title : l.url;
+    const badge = l.source ? `<span class="badge">${l.source}${l.subreddit ? " · " + l.subreddit : ""}</span>` : "";
+    return `<li>${badge} <a href="${l.url}" target="_blank">${label}</a></li>`;
+  }).join("") || "<li>No results found.</li>";
+}
 
 function renderUrlList(selector, urls) {
   const ul = $(selector);
   ul.innerHTML = urls.map(u =>
-    u.startsWith("http")
-      ? `<li><a href="${u}" target="_blank">${u}</a></li>`
-      : `<li>${u}</li>`
+    u.startsWith("http") ? `<li><a href="${u}" target="_blank">${u}</a></li>` : `<li>${u}</li>`
   ).join("");
 }
 
+function finishSearch(count) {
+  $("#fl-count").textContent = `Count: ${count}`;
+  $("#fl-status").textContent = "Done.";
+  $("#fl-save-btn").style.display = count ? "" : "none";
+}
+
 $("#fl-save-btn").addEventListener("click", () => {
-  const blob = new Blob([flUrls.join("\n")], { type: "text/plain" });
+  const lines = flLeads.map(l => l.title !== l.url ? `${l.title}\n${l.url}` : l.url);
+  const blob = new Blob([lines.join("\n\n")], { type: "text/plain" });
   const a = Object.assign(document.createElement("a"), {
     href: URL.createObjectURL(blob), download: "leads.txt"
   });

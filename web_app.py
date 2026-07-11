@@ -9,7 +9,10 @@ from money_generator import (
     GIG_SITES, PAY_SITES, PROMO_SITES,
     GRAB_LEADS_QUERIES,
     CRAIGSLIST_CITIES, CRAIGSLIST_CITY_LABELS,
+    REDDIT_SUBREDDITS,
     scrape_craigslist,
+    search_reddit,
+    search_upwork_rss,
     search_local_businesses,
     _issues_summary, _build_pitch,
     SCRAPING_AVAILABLE,
@@ -54,6 +57,47 @@ def find_leads_stream():
             yield sse({"error": str(e)})
 
     return Response(generate(), mimetype="text/event-stream")
+
+
+# ── reddit leads ─────────────────────────────────────────────────────────────
+@app.route("/api/find-leads/reddit")
+def find_leads_reddit():
+    keyword    = request.args.get("keyword", "")
+    subreddits = request.args.getlist("subreddits") or None
+
+    def generate():
+        subs = subreddits or REDDIT_SUBREDDITS
+        yield sse({"status": f"Searching Reddit: {', '.join('r/'+s for s in subs)}…"})
+        try:
+            results = search_reddit(keyword, subreddits=subs)
+            yield sse({"done": True, "results": results})
+        except Exception as e:
+            yield sse({"error": str(e)})
+        yield ": keep-alive\n\n"
+
+    return Response(generate(), mimetype="text/event-stream",
+                    headers={"X-Accel-Buffering": "no", "Cache-Control": "no-cache"})
+
+
+# ── upwork leads ──────────────────────────────────────────────────────────────
+@app.route("/api/find-leads/upwork")
+def find_leads_upwork():
+    keyword = request.args.get("keyword", "")
+
+    def generate():
+        yield sse({"status": f"Searching Upwork jobs for '{keyword}'…"})
+        try:
+            results = search_upwork_rss(keyword)
+            yield sse({"done": True, "results": results})
+        except Exception as e:
+            yield sse({"error": str(e)})
+
+    return Response(generate(), mimetype="text/event-stream")
+
+
+@app.route("/api/subreddits")
+def subreddits():
+    return jsonify(REDDIT_SUBREDDITS)
 
 
 # ── business finder ──────────────────────────────────────────────────────────
