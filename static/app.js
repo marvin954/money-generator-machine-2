@@ -118,20 +118,26 @@ $$(".src-tab").forEach(btn => {
 
 // Social media manual links
 const SOCIAL_LINKS = [
-  ["Facebook Groups", kw => `https://www.facebook.com/groups/search/posts/?q=${encodeURIComponent(kw)}`],
-  ["Twitter / X",    kw => `https://x.com/search?q=${encodeURIComponent(kw)}&f=live`],
-  ["LinkedIn",       kw => `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(kw)}`],
-  ["Nextdoor",       kw => `https://nextdoor.com/find-services/?query=${encodeURIComponent(kw)}`],
-  ["Thumbtack",      kw => `https://www.thumbtack.com/search/?q=${encodeURIComponent(kw)}`],
-  ["TaskRabbit",     kw => `https://www.taskrabbit.com/search?q=${encodeURIComponent(kw)}`],
+  // no login needed
+  { name: "Twitter / X",   url: kw => `https://x.com/search?q=${encodeURIComponent(kw)}+need+help&f=live`,        note: "No login needed" },
+  { name: "Thumbtack",     url: kw => `https://www.thumbtack.com/search/?q=${encodeURIComponent(kw)}`,             note: "No login needed" },
+  { name: "TaskRabbit",    url: kw => `https://www.taskrabbit.com/search?q=${encodeURIComponent(kw)}`,             note: "No login needed" },
+  // login needed
+  { name: "Facebook Groups", url: kw => `https://www.facebook.com/groups/search/posts/?q=${encodeURIComponent(kw)}`, note: "Login required" },
+  { name: "LinkedIn",      url: kw => `https://www.linkedin.com/search/results/content/?keywords=${encodeURIComponent(kw)}`, note: "Login required" },
+  { name: "Nextdoor",      url: kw => `https://nextdoor.com/find-services/?query=${encodeURIComponent(kw)}`,       note: "Login required" },
+  { name: "TikTok",        url: kw => `https://www.tiktok.com/search?q=${encodeURIComponent(kw)}`,                note: "No login needed" },
 ];
 
 function renderSocialBtns() {
   const kw = $("#fl-keyword").value.trim() || "website design";
   const el = $("#fl-social-btns");
-  el.innerHTML = SOCIAL_LINKS.map(([name, urlFn]) =>
-    `<a href="${urlFn(kw)}" target="_blank"><button class="btn blue">${name}</button></a>`
-  ).join("");
+  el.innerHTML = SOCIAL_LINKS.map(s => {
+    const cls = s.note === "Login required" ? "btn blue dim" : "btn blue";
+    return `<a href="${s.url(kw)}" target="_blank" title="${s.note}">
+      <button class="${cls}">${s.name} <small style="font-weight:normal;opacity:.8">${s.note === "Login required" ? "🔒" : "✓"}</small></button>
+    </a>`;
+  }).join("");
 }
 renderSocialBtns();
 $("#fl-keyword").addEventListener("input", renderSocialBtns);

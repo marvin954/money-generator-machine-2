@@ -540,11 +540,13 @@ def search_reddit(keyword, subreddits=None, limit=50):
     results = []
     seen = set()
 
+    UA_LIST = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64; rv:126.0) Gecko/20100101 Firefox/126.0",
+    ]
     session = requests.Session()
-    # Must use a browser User-Agent — Reddit blocks generic UA
-    session.headers.update({"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) "
-                             "AppleWebKit/537.36 (KHTML, like Gecko) "
-                             "Chrome/125.0.0.0 Safari/537.36"})
+    session.headers.update({"User-Agent": random.choice(UA_LIST)})
     try:
         url = f"https://www.reddit.com/r/{multi}/search.rss"
         r = session.get(url, params={"q": keyword, "sort": "new",
