@@ -1,12 +1,17 @@
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
-import threading
-import webbrowser
 import random
 import csv
 import os
 import json
 import re
+import threading
+import webbrowser
+
+try:
+    import tkinter as tk
+    from tkinter import ttk, messagebox, filedialog
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
 
 try:
     import requests
@@ -688,7 +693,7 @@ def scrape_craigslist(keyword, by_title=False, posted_today=False, cities=None):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-class App(tk.Tk):
+class App(tk.Tk if TKINTER_AVAILABLE else object):
     def __init__(self):
         super().__init__()
         self.title("Money Generator Machine 2.0")
@@ -1310,5 +1315,8 @@ class App(tk.Tk):
 
 
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    if not TKINTER_AVAILABLE:
+        print("tkinter not available — run web_app.py instead")
+    else:
+        app = App()
+        app.mainloop()
